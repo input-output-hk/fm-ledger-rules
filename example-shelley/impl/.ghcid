@@ -1,0 +1,1 @@
+-c "nix-shell ../../shell.nix --run \"cabal repl -f development cardano-ledger-shelley-ma\"" -o ghcid.txt
