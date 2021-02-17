@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -31,6 +32,7 @@ module Cardano.Ledger.Alonzo.PParams
     updatePParams,
     getLanguageView,
     LangDepView (..),
+    PParamFeeInfo,
   )
 where
 
@@ -46,6 +48,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices (..),
   )
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.SafeHash
   ( EraIndependentPParamView,
@@ -77,6 +80,7 @@ import Data.Maybe (fromMaybe)
 import Data.MemoBytes (MemoBytes (..), memoBytes)
 import Data.Typeable
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -561,3 +565,9 @@ getLanguageView pp PlutusV1 =
   case Map.lookup PlutusV1 (_costmdls pp) of
     Just x -> (PlutusView x)
     Nothing -> error ("CostModel map does not have cost for language: " ++ show PlutusV1)
+
+type PParamFeeInfo era =
+  ( HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_prices" (Core.PParams era) Prices
+  )

@@ -43,16 +43,19 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPData,
     WitnessPPDataHash,
     -- Figure 3
-    Tx (Tx, body, wits, isValidating, auxiliaryData),
+    Tx (Tx),
+    body,
+    wits,
+    isValidating,
+    auxiliaryData,
     TxBody (..),
     -- Figure 4
     ScriptPurpose (..),
     --  Figure 5
     getValidatorHash,
     txbody,
-    minfee,
+    txsize,
     isNonNativeScriptAddress,
-    feesOK,
     txins,
     Shelley.txouts,
     -- Figure 6
@@ -79,14 +82,20 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, PParams' (..), getLanguageView)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), scriptfee)
+import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..), Tag (..))
 import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentWitnessPPData,
     TxBody (..),
     TxOut (..),
     WitnessPPDataHash,
+    ppTxBody,
+    txcerts,
+    txinputs,
+    txinputs_fee,
+    txmint,
+    txwdrls,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -113,8 +122,7 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Shelley.Constraints
-import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin, (<+>), (<×>)))
-import Control.SetAlgebra (eval, (◁))
+import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, Val (coin))
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coders
 import Data.List (foldl')
@@ -146,6 +154,7 @@ import Shelley.Spec.Ledger.Tx (ValidateScript (isNativeScript))
 import Shelley.Spec.Ledger.TxBody (DelegCert (..), Delegation (..), TxIn (..), Wdrl (..), unWdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
+import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- ===================================================
 
@@ -198,6 +207,9 @@ instance
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
   deriving newtype (ToCBOR)
 
+instance HasField "_body" (Tx era) (TxBody era) where
+  getField (TxConstr (Memo x _)) = _body x
+
 deriving newtype instance
   ( Era era,
     Eq (Core.AuxiliaryData era),
@@ -240,7 +252,7 @@ pattern Tx ::
   IsValidating ->
   StrictMaybe (Core.AuxiliaryData era) ->
   Tx era
-pattern Tx {body, wits, isValidating, auxiliaryData} <-
+pattern Tx body wits isValidating auxiliaryData <-
   TxConstr
     ( Memo
         TxRaw
@@ -253,6 +265,18 @@ pattern Tx {body, wits, isValidating, auxiliaryData} <-
       )
   where
     Tx b w v a = TxConstr $ memoBytes (encodeTxRaw $ TxRaw b w v a)
+
+body :: Tx era -> TxBody era
+body (TxConstr (Memo (TxRaw b _ _ _) _)) = b
+
+wits :: Tx era -> TxWitness era
+wits (TxConstr (Memo (TxRaw _ x _ _) _)) = x
+
+isValidating :: Tx era -> IsValidating
+isValidating (TxConstr (Memo (TxRaw _ _ x _) _)) = x
+
+auxiliaryData :: Tx era -> StrictMaybe (Core.AuxiliaryData era)
+auxiliaryData (TxConstr (Memo (TxRaw _ _ _ x) _)) = x
 
 --------------------------------------------------------------------------------
 -- HasField instances for the Tx
@@ -362,29 +386,6 @@ isNonNativeScriptAddress (TxConstr (Memo (TxRaw {_wits = w}) _)) addr =
         Nothing -> False
         Just scr -> not (isNativeScript @era scr)
 
-feesOK ::
-  forall era.
-  ( UsesValue era,
-    UsesTxOut era,
-    ValidateScript era,
-    HasField "txfee" (Core.TxBody era) Coin,
-    HasField "exunits" (Core.TxBody era) ExUnits,
-    HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  PParams era ->
-  Tx era ->
-  UTxO era ->
-  Bool
-feesOK pp tx (UTxO m) =
-  (bal >= getField @"txfee" txb)
-    && all (not . isNonNativeScriptAddress tx . getField @"address") utxoFees
-    && (minfee pp tx <= getField @"txfee" txb)
-  where
-    txb = txbody tx
-    fees = getField @"txinputs_fee" txb
-    utxoFees = eval (fees ◁ m) -- compute the domain restriction to those inputs where fees are paid
-    bal = coin (balance @era (UTxO utxoFees))
-
 -- | The keys of all the inputs of the TxBody (both the inputs for fees, and the normal inputs).
 txins ::
   ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -393,6 +394,10 @@ txins ::
   Core.TxBody era ->
   Set (TxIn (Crypto era))
 txins txb = Set.union (getField @"inputs" txb) (getField @"txinputs_fee" txb)
+
+-- | The keys of all the inputs of the TxBody (both the inputs for fees, and the normal inputs).
+txins2 :: TxBody era -> Set (TxIn (Crypto era))
+txins2 b = Set.union (txinputs b) (txinputs_fee b)
 
 -- | txsize computes the length of the serialised bytes
 txsize :: Tx era -> Integer
@@ -542,7 +547,6 @@ getData tx (UTxO m) sp = case sp of
 
 collectNNScriptInputs ::
   ( UsesTxOut era,
-    ToCBOR (Core.Script era),
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
@@ -657,6 +661,9 @@ checkScriptData tx utxo (sp, _h) = any ok scripts
         || ( isJust (indexedRdmrs tx sp)
                && (not (isSpending sp) || not (null (getData tx utxo sp)))
            )
+
+txwits :: Tx era -> TxWitness era
+txwits x = wits x
 
 -- =======================================================
 

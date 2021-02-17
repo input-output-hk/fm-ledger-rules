@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
+import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
@@ -200,8 +201,8 @@ instance
 --   the mint field.
 consumed ::
   forall era.
-  ( UsesValue era,
-    UsesTxOut era,
+  ( Val.Val (Core.Value era),
+    HasField "value" (Core.TxOut era) (Core.Value era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
@@ -214,8 +215,8 @@ consumed ::
   Core.Value era
 consumed pp u tx =
   balance @era (eval (txins @era tx ◁ u))
-    <> getField @"mint" tx
-    <> (Val.inject $ refunds <> withdrawals)
+    <+> getField @"mint" tx
+    <+> (Val.inject $ refunds <+> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = Shelley.keyRefunds pp tx
