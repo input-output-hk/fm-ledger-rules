@@ -684,7 +684,8 @@ oldEqualsNew newepochstate = old == new
         (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply)
         globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new_with_zeros = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new = Map.filter (/= Coin 0) new_with_zeros
 
 oldEqualsNewOn ::
   forall era.
@@ -709,7 +710,8 @@ oldEqualsNewOn newepochstate = old == new
         )
         globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    new = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new_with_zeros = aggregateRewards (emptyPParams {_protocolVersion = ProtVer 2 0}) (rs unAggregated)
+    new = Map.filter (/= Coin 0) new_with_zeros
 
 -- ==================================================================
 

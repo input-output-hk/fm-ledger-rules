@@ -414,8 +414,8 @@ data Reward crypto = Reward
 --  function 'aggregateRewards' so that 'Set.findMax' returns
 --  the expected value.
 instance Ord (Reward crypto) where
-  compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = LT
-  compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = GT
+  compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
+  compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
   compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
 
 instance NoThunks (Reward crypto)
@@ -451,7 +451,7 @@ aggregateRewards pp rewards =
   where
     addRewardToCoin r = (<>) (rewardAmount r)
     -- s should never be null, but we are being cautious
-    lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMax) s
+    lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMin) s
 
 -- | Reward one pool
 rewardOnePool ::
@@ -538,7 +538,12 @@ rewardOnePool
               mRewards
           else mRewards
       removeDegenerate rwds =
-        let withoutZeros = Set.filter (\rwd -> rewardAmount rwd /= Coin 0) rwds
+        let memberNotZero (Reward MemberReward _ c) = c /= Coin 0
+            memberNotZero (Reward LeaderReward _ _) = True
+            -- We do not filter out zero valued Leader rewards since
+            -- prior to protocol version 3 the zero values can serve
+            -- as evidence that a member reward was overridden.
+            withoutZeros = Set.filter memberNotZero rwds
          in if Set.null withoutZeros
               then Nothing
               else Just withoutZeros
@@ -637,10 +642,7 @@ reward
 --   order as previous revisions. That's why we call foldListM before applying accum.
 foldListM :: Monad m => (k -> ans -> m ans) -> ans -> [k] -> m ans
 foldListM _accum ans [] = pure ans
--- Order matters so we don't use this clause (as it associates to the left)
--- foldListM accum ans (k:more) = do { !ans1 <- accum k ans; foldListM accum ans1 more }
--- instead we use this one that associates to the right.
-foldListM accum ans (k : more) = do ans1 <- foldListM accum ans more; accum k ans1
+foldListM accum ans (k : more) = do !ans1 <- accum k ans; foldListM accum ans1 more
 
 -- | Compute the Non-Myopic Pool Stake
 --

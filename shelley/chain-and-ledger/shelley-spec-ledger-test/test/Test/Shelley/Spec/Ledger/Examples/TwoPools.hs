@@ -818,7 +818,7 @@ twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 testAggregateRewardsLegacy :: Assertion
 testAggregateRewardsLegacy =
   (aggregateRewards @C_Crypto) ppEx rsEx9Agg
-    @?= Map.singleton Cast.carlSHK (carlLeaderRewardsFromBob @(Crypto C))
+    @?= Map.singleton Cast.carlSHK (carlLeaderRewardsFromAlice @(Crypto C))
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
