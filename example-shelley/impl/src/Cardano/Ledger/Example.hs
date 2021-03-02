@@ -19,8 +19,12 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.SafeHash (EraIndependentAuxiliaryData, makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxOut (..), UsesValue)
+import Cardano.Ledger.Val (Val ((<->)))
+import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import Shelley.Spec.Ledger.PParams as Shelley
@@ -30,12 +34,28 @@ import Shelley.Spec.Ledger.Tx
     validateNativeMultiSigScript,
   )
 import Shelley.Spec.Ledger.API
-  ( ApplyBlock,
+  ( AccountState (AccountState),
+    ApplyBlock,
     ApplyTx,
+    CanStartFromGenesis(..),
+    Coin (Coin),
+    DPState (DPState),
+    DState (_genDelegs),
+    EpochState (EpochState),
+    GenDelegs (GenDelegs),
     GetLedgerView,
+    LedgerState (LedgerState),
+    NewEpochState (NewEpochState),
     PraosCrypto,
+    PoolDistr (PoolDistr),
     ShelleyBasedEra,
-    TxOut (..)
+    ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
+    StrictMaybe (SNothing),
+    TxOut (..),
+    UTxOState (UTxOState),
+    balance,
+    genesisUTxO,
+    word64ToCoin,
   )
 
 import Shelley.Spec.Ledger.TxBody (TxBody (..))
@@ -120,6 +140,39 @@ instance PraosCrypto c => ApplyTx (ExampleEra c)
 instance PraosCrypto c => ApplyBlock (ExampleEra c)
 instance PraosCrypto c => GetLedgerView (ExampleEra c)
 instance PraosCrypto c => ShelleyBasedEra (ExampleEra c)
+
+instance ( CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
+  initialState sg () =
+    NewEpochState
+      initialEpochNo
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      ( EpochState
+          (AccountState (Coin 0) reserves)
+          emptySnapShots
+          ( LedgerState
+              ( UTxOState
+                  initialUtxo
+                  (Coin 0)
+                  (Coin 0)
+                  def
+              )
+              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+          )
+          pp
+          pp
+          def
+      )
+      SNothing
+      (PoolDistr Map.empty)
+    where
+      initialEpochNo = 0
+      initialUtxo = genesisUTxO sg
+      reserves =
+        word64ToCoin (sgMaxLovelaceSupply sg)
+          <-> balance initialUtxo
+      genDelegs = sgGenDelegs sg
+      pp = sgProtocolParams sg
 
 -- These rules are all inherited from Shelley
 -- The types on the right are all instances of class STS, ultimately defined in Control.State.Transition.Extended
