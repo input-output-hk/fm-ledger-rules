@@ -6,8 +6,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,7 +24,7 @@ where
 import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
+-- import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.SafeHash
   ( EraIndependentAuxiliaryData,
     SafeHash,
@@ -43,6 +45,6 @@ deriving instance
   CC.Crypto crypto =>
   FromCBOR (AuxiliaryDataHash crypto)
 
-class ValidateAuxiliaryData era where
-  hashAuxiliaryData :: Core.AuxiliaryData era -> AuxiliaryDataHash (Crypto era)
+class ValidateAuxiliaryData era c | era -> c where
+  hashAuxiliaryData :: Core.AuxiliaryData era -> AuxiliaryDataHash c
   validateAuxiliaryData :: Core.AuxiliaryData era -> Bool

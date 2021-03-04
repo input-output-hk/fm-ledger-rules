@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.PropertyTests
 where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
@@ -80,7 +79,6 @@ minimalPropertyTests ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
@@ -121,7 +119,6 @@ propertyTests ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>

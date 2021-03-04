@@ -53,7 +53,7 @@ module Cardano.Ledger.Alonzo.TxBody
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -328,6 +328,7 @@ instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentT
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
+
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
 inputs_fee' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
@@ -562,6 +563,12 @@ instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c))
 instance HasField "vldt" (TxBody era) ValidityInterval where
   getField (TxBodyConstr (Memo m _)) = _vldt m
 
+instance
+  c ~ (Crypto era) =>
+  HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _adHash m
+
 -- ===================================================
 
 ppTxOut ::
@@ -595,8 +602,11 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u mnt sdh axh) _)) =
       ("update", ppStrictMaybe ppUpdate u),
       ("mint", ppValue mnt),
       ("sdHash", ppStrictMaybe ppSafeHash sdh),
-      ("adHash", ppStrictMaybe ppSafeHash axh)
+      ("adHash", ppStrictMaybe ppAuxDataHash axh)
     ]
+
+ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
+ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance
   ( Era era,

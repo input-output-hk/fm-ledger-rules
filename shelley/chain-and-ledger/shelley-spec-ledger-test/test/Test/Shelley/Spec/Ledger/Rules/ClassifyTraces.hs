@@ -20,7 +20,6 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 where
 
 import Cardano.Binary (ToCBOR, serialize')
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints
@@ -117,8 +116,7 @@ relevantCasesAreCovered ::
     QC.HasTrace (CHAIN era) (GenEnv era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -138,8 +136,7 @@ relevantCasesAreCoveredForTrace ::
     UsesTxOut era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -304,8 +301,7 @@ hasPParamUpdate tx =
 hasMetadata ::
   ( UsesTxBody era,
     UsesScript era,
-    ToCBOR (Core.AuxiliaryData era),
-    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+    ToCBOR (Core.AuxiliaryData era)
   ) =>
   Tx era ->
   Bool

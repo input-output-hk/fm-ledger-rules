@@ -166,7 +166,7 @@ instance
   ( CryptoClass.Crypto c,
     Core.AnnotatedData (Core.Script (ShelleyMAEra ma c))
   ) =>
-  ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c)
+  ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) c
   where
   validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
   hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)

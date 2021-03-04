@@ -81,7 +81,7 @@ type UsesAuxiliary era =
   ( Era era,
     Eq (AuxiliaryData era),
     Show (AuxiliaryData era),
-    ValidateAuxiliaryData era,
+    ValidateAuxiliaryData era (Crypto era),
     AnnotatedData (AuxiliaryData era)
   )
 

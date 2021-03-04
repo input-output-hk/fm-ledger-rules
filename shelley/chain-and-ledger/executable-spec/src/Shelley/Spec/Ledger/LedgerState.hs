@@ -68,7 +68,7 @@ module Shelley.Spec.Ledger.LedgerState
     consumed,
     verifiedWits,
     witsVKeyNeeded,
-    witsFromWitnessSet,
+    witsFromTxWitnesses,
 
     -- * DelegationState
     keyRefunds,
@@ -236,9 +236,6 @@ import Shelley.Spec.Ledger.Slot
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
-    WitnessSet,
-    WitnessSetHKD (..),
-    addrWits,
     extractKeyHashWitnessSet,
   )
 import Shelley.Spec.Ledger.TxBody
@@ -862,15 +859,20 @@ diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
 diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
--- | Extract the witness hashes from the Witness set.
-witsFromWitnessSet ::
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
-  WitnessSet era ->
+-- | Extract the witness hashes from the Transaction.
+witsFromTxWitnesses ::
+  ( Era era,
+    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
+  ) =>
+  Core.Tx era ->
   WitHashes (Crypto era)
-witsFromWitnessSet (WitnessSet aWits _ bsWits) =
+witsFromTxWitnesses coreTx =
   WitHashes $
-    Set.map witKeyHash aWits
+    Set.map witKeyHash addWits
       `Set.union` Set.map bootstrapWitKeyHash bsWits
+  where
+    bsWits = getField @"bootWits" coreTx
+    addWits = getField @"addrWits" coreTx
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
@@ -884,7 +886,7 @@ witsVKeyNeeded ::
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   UTxO era ->
-  Tx era ->
+  Core.Tx era ->
   GenDelegs (Crypto era) ->
   WitHashes (Crypto era)
 witsVKeyNeeded utxo' tx genDelegs =
@@ -895,7 +897,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       `Set.union` wdrlAuthors
       `Set.union` updateKeys
   where
-    txbody = body' tx
+    txbody = getField @"body" tx
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
     inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
       where
@@ -938,32 +940,31 @@ witsVKeyNeeded utxo' tx genDelegs =
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
-verifiedWits :: -- TODO further generalize by generalizing bootwits, addrwits
+verifiedWits ::
   forall era.
   ( Era era,
-    Core.AnnotatedData (Core.Script era),
+    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Tx era ->
+  Core.Tx era ->
   Either [VKey 'Witness (Crypto era)] ()
 verifiedWits tx =
   case (failed <> failedBootstrap) of
     [] -> Right ()
     nonEmpty -> Left nonEmpty
   where
-    txbody = body' tx
-    wits = witnessSet' tx
+    txbody = getField @"body" tx
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
         <$> filter
           (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ addrWits wits)
+          (Set.toList $ getField @"addrWits" tx)
     failedBootstrap =
       bwKey
         <$> filter
           (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ bootWits wits)
+          (Set.toList $ getField @"bootWits" tx)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.

@@ -20,6 +20,7 @@ where
 
 -- imports for the WellFormed constraint
 
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -157,6 +158,7 @@ type WellFormed era =
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
+    HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
     -- Tx
     HasField "body" (Core.Tx era) (Core.TxBody era),
     HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),

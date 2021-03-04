@@ -259,7 +259,6 @@ utxoTransition ::
     UsesPParams era,
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "vldt" (Alonzo.TxBody era) ValidityInterval,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_minUTxOValue" (Core.PParams era) Coin,
@@ -321,8 +320,7 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   -- TODO remove this?
-  -- This came from the ShelleyMA eras, I don't think it applies here.
-  -- It does not appear in the Alonzo specification
+  -- It does not appear in the Alonzo specification. SHOULD IT STAY?
   let minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
@@ -345,9 +343,7 @@ utxoTransition = do
       totExunits = getField @"totExunits" tx
   totExunits <= maxTxEx ?! ExUnitsTooSmallUTxO maxTxEx totExunits
 
-  -- TODO remove this?
-  -- This came from the ShelleyMA eras, I don't think it applies here.
-  -- It does not appear in the Alonzo specification
+  -- This does not appear in the Alonzo specification. But the test should be in every Era.
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =

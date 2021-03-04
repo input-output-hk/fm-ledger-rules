@@ -101,7 +101,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
     PoolCert (..),
@@ -291,10 +290,15 @@ getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::
+  forall era.
+  Era era =>
   HasField "update" (Core.TxBody era) (StrictMaybe (Update era)) =>
-  Tx era ->
+  Core.Tx era ->
   Maybe (Update era)
-txup (TxPrime txbody _ _) = strictMaybeToMaybe (getField @"update" txbody)
+txup tx = strictMaybeToMaybe (getField @"update" txbody)
+  where
+    txbody :: Core.TxBody era
+    txbody = (getField @"body" tx)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
@@ -326,7 +330,7 @@ scriptsNeeded ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   UTxO era ->
-  Tx era ->
+  Core.Tx era ->
   Set (ScriptHash (Crypto era))
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
@@ -339,10 +343,12 @@ scriptsNeeded u tx =
           scriptStakeCred
           (filter requiresVKeyWitness certificates)
       )
+    `Set.union` (getField @"minted" txbody) -- This might be Set.empty in some Eras.
   where
-    withdrawals = unWdrl $ getField @"wdrls" $ body' tx
-    u'' = eval ((txinsScript (getField @"inputs" $ body' tx) u) ◁ u)
-    certificates = (toList . getField @"certs" . body') tx
+    txbody = getField @"body" tx
+    withdrawals = unWdrl $ getField @"wdrls" $ txbody
+    u'' = eval ((txinsScript (getField @"inputs" $ txbody) u) ◁ u)
+    certificates = (toList . getField @"certs") txbody
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

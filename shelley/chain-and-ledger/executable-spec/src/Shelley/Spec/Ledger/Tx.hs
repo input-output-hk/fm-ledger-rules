@@ -300,10 +300,16 @@ instance body ~ (Core.TxBody era) => HasField "body" (Tx era) body where
 instance HasField "witnessSet" (Tx era) (WitnessSet era) where
   getField (Tx' _ wits _ _) = wits
 
-instance aux ~ (Core.AuxiliaryData era) => HasField "auxiliaryData" (Tx era) (StrictMaybe aux) where
+instance
+  aux ~ Core.AuxiliaryData era =>
+  HasField "auxiliaryData" (Tx era) (StrictMaybe aux)
+  where
   getField (Tx' _ _ auxdata _) = auxdata
 
-instance c ~ (Crypto era) => HasField "addrWits" (Tx era) (Set (WitVKey 'Witness c)) where
+instance
+  c ~ (Crypto era) =>
+  HasField "addrWits" (Tx era) (Set (WitVKey 'Witness c))
+  where
   getField (Tx' _ (WitnessSet' a _b _c _) _ _) = a
 
 instance
@@ -312,7 +318,10 @@ instance
   where
   getField (Tx' _ (WitnessSet' _a b _c _) _ _) = b
 
-instance c ~ (Crypto era) => HasField "bootWits" (Tx era) (Set (BootstrapWitness c)) where
+instance
+  c ~ (Crypto era) =>
+  HasField "bootWits" (Tx era) (Set (BootstrapWitness c))
+  where
   getField (Tx' _ (WitnessSet' _a _b c _) _ _) = c
 
 instance HasField "txsize" (Tx era) Integer where
@@ -428,7 +437,7 @@ class
   (Era era, ToCBOR (Core.Script era)) =>
   ValidateScript era
   where
-  validateScript :: Core.Script era -> Tx era -> Bool
+  validateScript :: Core.Script era -> Core.Tx era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
   isNativeScript :: Core.Script era -> Bool
   isNativeScript _ = True

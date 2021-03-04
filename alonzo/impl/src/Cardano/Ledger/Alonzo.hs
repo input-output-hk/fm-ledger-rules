@@ -106,7 +106,7 @@ instance
 
   mergePPUpdates _ = updatePParams
 
-instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) where
+instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
   validateAuxiliaryData = error ("NO validateAuxiliaryData yet.") -- TODO Fill this in
 

@@ -11,101 +11,29 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Mary.Value (PolicyID, Value, policies, policyID)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesScript, UsesTxBody, UsesTxOut, UsesValue)
-import Cardano.Ledger.ShelleyMA.AuxiliaryData ()
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
-import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
-import Data.Foldable (Foldable (toList))
-import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Delegation.Certificates (requiresVKeyWitness)
-import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState (UTxOState)
-import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
-  ( UtxowPredicateFailure (..),
-    utxoWitnessed,
+  ( ShelleyStyleWitnessNeeds,
+    UtxowPredicateFailure (..),
+    shelleyStyleWitness,
   )
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Tx (Tx (_body), ValidateScript)
-import Shelley.Spec.Ledger.TxBody
-  ( DCert,
-    EraIndependentTxBody,
-    RewardAcnt (getRwdCred),
-    TxIn,
-    Wdrl (unWdrl),
-  )
-import Shelley.Spec.Ledger.UTxO
-  ( UTxO,
-    getScriptHash,
-    scriptCred,
-    scriptStakeCred,
-    txinsScript,
-  )
+import Shelley.Spec.Ledger.Tx (Tx)
 
--- ==========================================================
-
--- | We want to reuse the same rules for Mary and Allegra. This however relies
--- on being able to get a set of 'PolicyID's from the value. Since a 'Coin' has
--- no policies, we create a small class which returns a null set of 'PolicyID's
--- for 'Coin'.
---
--- This should not escape this module.
-class GetPolicies a crypto where
-  getPolicies :: a -> Set (PolicyID crypto)
-
-instance GetPolicies Coin crypto where
-  getPolicies = const Set.empty
-
-instance GetPolicies (Value crypto) crypto where
-  getPolicies = policies
-
--- | Computes the set of script hashes required to unlock the transaction inputs
--- and the withdrawals.
-scriptsNeeded ::
-  ( UsesScript era,
-    UsesTxBody era,
-    UsesAuxiliary era,
-    GetPolicies (Core.Value era) (Crypto era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "mint" (Core.TxBody era) (Core.Value era)
-  ) =>
-  UTxO era ->
-  Tx era ->
-  Set (ScriptHash (Crypto era))
-scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
-    `Set.union` Set.fromList
-      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
-          Map.keys withdrawals
-      )
-    `Set.union` Set.fromList
-      ( Maybe.mapMaybe
-          scriptStakeCred
-          (filter requiresVKeyWitness certificates)
-      )
-    `Set.union` (policyID `Set.map` (getPolicies $ getField @"mint" txb))
-  where
-    txb = _body tx
-    withdrawals = unWdrl $ getField @"wdrls" txb
-    u'' = eval ((txinsScript (getField @"inputs" $ _body tx) u) ◁ u)
-    certificates = (toList . getField @"certs") txb
+-- ==============================================================================
+--   We want to reuse the same rules for Mary and Allegra. We accomplish this
+--   by adding: HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era)))
+--   to the (WellFormed era) constraint, and adjusting UTxO.(ScriptsNeeded) to
+--   add this set to its output. In the Shelley and Allegra Era, this is the empty set.
+--   With this generalization, Shelley.Spec.Ledger.STS.Utxow(shelleyStyleWitness)
+--   can still be used in Allegra and Mary, because they use the same Shelley style rules.
 
 --------------------------------------------------------------------------------
 -- UTXOW STS
@@ -115,30 +43,15 @@ data UTXOW era
 
 instance
   forall era.
-  ( UsesValue era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesAuxiliary era,
-    UsesScript era,
-    ValidateScript era,
-    GetPolicies (Core.Value era) (Crypto era),
+  ( -- Fix Core.Tx to the Allegra and Mary Era
+    Core.Tx era ~ Tx era,
+    -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Tx era,
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField
-      "adHash"
-      (Core.TxBody era)
-      ( StrictMaybe
-          (AuxiliaryDataHash (Crypto era))
-      ),
-    HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    -- Supply the HasField and Validate instances for Mary and Allegra (which match Shelley)
+    ShelleyStyleWitnessNeeds era
   ) =>
   STS (UTXOW era)
   where
@@ -149,7 +62,7 @@ instance
   type
     PredicateFailure (UTXOW era) =
       UtxowPredicateFailure era
-  transitionRules = [utxoWitnessed scriptsNeeded]
+  transitionRules = [shelleyStyleWitness]
   initialRules = []
 
 instance

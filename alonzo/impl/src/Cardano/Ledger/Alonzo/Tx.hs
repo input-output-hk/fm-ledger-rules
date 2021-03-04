@@ -56,8 +56,6 @@ module Cardano.Ledger.Alonzo.Tx
     txbody,
     minfee,
     isNonNativeScriptAddress,
-    -- txsize,
-    -- totExunits,
     txins,
     Shelley.txouts,
     -- Figure 6
