@@ -22,9 +22,9 @@
     & \fun{ininterval}~\var{slot}~(i_s, i_f) ~=~
     \begin{cases}
       \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
-      \var{slot}~\leq~i_f & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing)\\
+      \var{slot}~<~i_f & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing)\\
       i_s~\leq~\var{slot} & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing) \\
-      i_s~\leq~\var{slot}~\leq~i_f & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
+      i_s~\leq~\var{slot}~<~i_f & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
     \end{cases}
     \nextdef
     & \fun{getCoin} \in \TxOut \to \Coin \\

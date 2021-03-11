@@ -5,7 +5,7 @@
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{s_{v1}} & \ScriptNI & \ScriptMSig \\
-      \var{s_{v2}} & \ScriptMPS & \text{extended script language}
+      \var{s_{v2}} & \Timelock & \text{extended script language}
     \end{array}
   \end{equation*}
   %
@@ -15,7 +15,7 @@
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{txout} & \TxOut & \Addr \times \hldiff{\Value} \\
 %      & \text{tx outputs}
-      \var{s} & \Script & \hldiff{\ScriptNI \uniondistinct \ScriptMPS}
+      \var{s} & \Script & \hldiff{\ScriptNI \uniondistinct \Timelock}
 %      & \text{scripts}
       \\
     \end{array}
@@ -85,10 +85,10 @@ $\TxOut$ now contains a $\Value$ rather than a $\Coin$.
 
 The multi-signature scripting language has been renamed to $\ScriptNI$ and
 the type $\Script$ has been extended to include a new scripting language,
-$\ScriptMPS$. The two types of scripts which make up the $\Script$ type are both
+$\Timelock$. The two types of scripts which make up the $\Script$ type are both
 native, meaning
 that they are evaluated by the ledger directly. We specify the evaluation
-function for the additional script type in section~\ref{sec:mps-lang}.
+function for the additional script type in section~\ref{sec:timelock-lang}.
 
 Both types of scripts can be used for the same purposes, which means, for this
 spec, as

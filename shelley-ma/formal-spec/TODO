@@ -12,5 +12,3 @@
   some value in keeping the minValue calculation as easy as possible,
   and having 'some constant amount plus some amount for every non-ada
   token' is easily understood.
-
-- Decide what to do with the MPS language

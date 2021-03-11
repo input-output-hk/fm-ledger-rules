@@ -1,5 +1,5 @@
 \section{Script Constructors and Evaluation}
-\label{sec:mps-lang}
+\label{sec:timelock-lang}
 
 
 \begin{figure}[htb]
@@ -8,32 +8,28 @@
     \fun{validateScript} & ~s~\var{tx}~=
                            \begin{cases}
                              \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptNI \\
-                             \fun{evalFPS}~s~\var{vhks} ~txb & \text{if}~s \in\ScriptMPS \\
+                             \fun{evalTimelock}~s~\var{vhks} ~\var{itr} & \text{if}~s \in\Timelock \\
                              \mathsf{False} & \text{otherwise}
                            \end{cases} \\
                          & ~~~~\where \var{vhks}\leteq \{\fun{hashKey}~vk \vert
-                           vk \in \dom(\fun{txwitsVKey}~\var{tx})\}
+                           vk \in \dom(\fun{txwitsVKey}~\var{tx})\} \\
+                           \var{itr} \leteq \fun{txvldt}~ (\txbody~ \var{tx})
   \end{align*}
   \caption{Script Validation}
   \label{fig:functions-validate}
 \end{figure}
 
 We have updated the
-$\fun{validateScripts}$ function, to allow for the validation of both the
+$\fun{validateScript}$ function, to allow for the validation of both the
 multi-signature scripts and minting policy scripts, calling the appropriate
 evaluator for each type of script, see Figure~\ref{fig:functions-validate}.
 
-\begin{note}
-  This appendix will change if we change anything about the language, it will go
-  into the main part once it's more solidified
-\end{note}
-
 The arguments that are passed to the $\fun{validateScript}$ function include all those
-that are needed for FPS and MSig script evaluation :
+that are needed for Timelock and MSig script evaluation :
 
 \begin{itemize}
 \item The script getting evaluated
-\item The set of key hashes (needed to use MSig scripts as FPS scripts)
+\item The set of key hashes (needed to use MSig scripts as Timelock scripts)
 \item The transaction body
 \end{itemize}
 
@@ -41,30 +37,39 @@ Because of the extra arguments
 (the $\TxBody$), we must also modify the call to this function
 within the UTXOW rule, passing it the body of the signal transaction.
 
-The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-eval}.
+The semantics of the Timelock language are specified in Figure~\ref{fig:defs:tx-mc-eval}.
 
 \begin{figure*}[htb]
-  \emph{FPS Script Constructor Types}
+  \emph{Timelock Script Constructor Types}
   \begin{align*}
-    & \type{evalFPS} & \in\Script\to \powerset{\KeyHash}\to\TxBody\to\Bool & \\
-    & \text{The type of the FPS script evaluator} \\~\\
+    & \type{evalTimelock} & \in\Timelock \to \powerset{\KeyHash}\to(\Slot^? \times \Slot^?)\to\Bool & \\
+    & \text{The type of the Timelock script evaluator} \\~\\
     %
-    & \type{JustMSig} & \in \ScriptMSig \to \ScriptMPS & \\
+    & \type{Signature} & \in \KeyHash \to \Timelock & \\
     %
-    & \type{Interval} & \in (\Slot^? \times \Slot^?) \to \ScriptMPS &\\
+    & \type{AllOf} & \in \seqof{\Timelock} \to \Timelock & \\
     %
-    & \type{AND} & \in \ScriptMPS \to \ScriptMPS \to \ScriptMPS & \\
+    & \type{AnyOf} & \in \seqof{\Timelock} \to \Timelock & \\
     %
-    & \type{OR} & \in \ScriptMPS \to \ScriptMPS \to \ScriptMPS & \\
+    & \type{MOfN} & \in \N \to \seqof{\Timelock} \to \Timelock & \\
+    %
+    & \type{ValidityInterval} & \in (\Slot^? \times \Slot^?) \to \Timelock &\\
   \end{align*}
   %
-  \emph{FPS Script Evaluation}
+  \emph{Timelock Script Evaluation}
   \begin{align*}
-    & \fun{evalFPS}  ~(\type{JustMSig}~s)~\var{vhks}~\var{txb} \\
-    &~~~~ =~ \fun{evalMultiSigScript}~s~\var{vhks} \\
-    & \text {checks the msig script}\\~\\
+    & \text {following are defined as in $\ScriptNI$}\\
+    \fun{evalTimelock} & ~(\type{Signature}~hk)~\var{vhks}~\wcard =  hk \in vhks \\
+    \fun{evalTimelock} & ~(\type{AllOf}~ts)~\var{vhks}~\wcard =
+                              \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalTimelock} & ~(\type{AnyOf}~ts)~\var{vhks}~\wcard =
+                              \exists t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalTimelock} & ~(\type{MOfN}~m~ts)~\var{vhks}~\wcard = \\
+                             & m \leq \Sigma
+                               (\textrm{card} \{ t s.t. t \leftarrow ts \wedge \fun{evalMultiSigScript}~\var{t}~\var{vhks} \\~\\
     %
-    & \fun{evalFPS} ~(\type{Interval}~\var{(i_s, i_f)})~\var{vhks}~\var{txb} \\
+    & \text {checks that the tx validity interval is within the interval specified by the script:}\\
+    & \fun{evalTimelock} ~(\type{ValidityInterval}~\var{(i_s, i_f)})~\var{vhks}~\var{(i_s, i_f)} \\
     &~~~~ =~
     \begin{cases}
       \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
@@ -72,25 +77,14 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
       (i_s' \neq \Nothing) \wedge (i_s~\leq~i_s') & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing)\\
       (i_s~\leq~i_s') \wedge (i_f'~\leq~i_f) & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
     \end{cases} \\
-    &~~~~~~~ \where \\
-    &~~~~~~~~~~~ (i_s', i_f') = \fun{txvld}~{txb} \\
-    & \text {checks that the tx validity interval is within the interval specified by the script}\\~\\
-    %
-    & \fun{evalFPS} ~(\type{AND}~s1~s2)~\var{vhks}~\var{txb}\\
-    &~~~~ =~ (\fun{evalFPS}~s1~\var{vhks}~\var{txb}) \wedge (\fun{evalFPS}~s2~\var{vhks}~\var{txb})  \\
-    & \text {checks that both scripts validate on the given inputs}  \\~\\
-    %
-    & \fun{evalFPS} ~(\type{OR}~s1~s2)~\var{vhks}~\var{txb}\\
-    &~~~~ =~ (\fun{evalFPS}~s1~\var{vhks}~\var{txb}) \vee (\fun{evalFPS}~s2~\var{vhks}~\var{txb}) \\
-    & \text{checks that one of the scripts validates on the given inputs}
   \end{align*}
-  \caption{FPS Script Constructor Types and Evaluation}
+  \caption{Timelock Script Constructor Types and Evaluation}
   \label{fig:defs:tx-mc-eval}
 \end{figure*}
 
 % The Figures~\ref{fig:defs:tx-mc-eval},~\ref{fig:defs:tx-mc-eval-2},
 % and~\ref{fig:whitelist-example} give
-% possible constructors of the FPS language.
+% possible constructors of the Timelock language.
 %
 % %% \begin{note}
 % %%   sort out the constructors
@@ -98,48 +92,48 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
 %
 % \begin{figure*}[htb]
 %   \begin{align*}
-%     & \fun{evalFPS} \in\ScriptMPS\to\PolicyID\to\Slot\to\powerset\KeyHash \\
+%     & \fun{evalTimelock} \in\Timelock\to\PolicyID\to\Slot\to\powerset\KeyHash \\
 %     &~~~~\to\TxBody\to\UTxO \to\Bool  \\
 %     & \text{UTxO is only for the outputs THIS tx is spending, not global UTxO, i.e.} \\
 %     & \text{when called,}~\var{spentouts}~=~(\fun{txins}~\var{txb}) ~\restrictdom~\var{utxo} \\~\\
 %     %
-%     & \fun{evalFPS}  ~(\type{JustMSig}~s)~\var{pid}~\var{slot}~\var{vhks}
+%     & \fun{evalTimelock}  ~(\type{JustMSig}~s)~\var{pid}~\var{slot}~\var{vhks}
 %      ~\var{txb}~\var{spentouts} \\
 %     &~~~~ =~ \fun{evalMultiSigScript}~s~\var{vhks} \\
 %     & \text {checks the msig script}\\~\\
 %     %
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~\type{DoMint}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
 %     &~~~~ =~ \var{pid} \notin \dom~(\fun{mint}~\var{txb}) \\
 %     & \text {checks that script hash of this script is not an asset ID being minted by tx}  \\~\\
 %     %
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~\type{SignedByPIDToken}~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
 %     &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{pid}~ \restrictdom~(\fun{ubalance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
 %     & \text{checks that tx is signed by a key whose hash is the name of a token in this asset}
 %     \\~\\
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~(\type{SpendsCur}~\var{pid'})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
 %     &~~~~ =~ (\var{pid'}~\neq~\Nothing ~\wedge ~\var{pid'}~\in~ \dom~(\fun{ubalance}~\var{spentouts}))\\
 %     &~~~~~~ \vee (\var{pid'}~=~\Nothing ~\wedge ~\var{pid}~\in~ \dom~(\fun{ubalance}~\var{spentouts})) \\
 %     & \text{checks that this transaction spends asset pid' OR itself if}~\var{pid'}~=~\Nothing
 %     \\~\\
-%     &\fun{evalFPS}~(\type{Not}~s)~\var{pid}~\var{slot}~\var{vhks}
+%     &\fun{evalTimelock}~(\type{Not}~s)~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}
 %    \\
-%     &~~~~ = \neg ~\fun{evalFPS}~s~\var{pid}~\var{slot}~\var{vhks}
+%     &~~~~ = \neg ~\fun{evalTimelock}~s~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}\\~\\
 %     %
-%     &\fun{evalFPS}~(\type{RequireAll}~ls)~\var{pid}~\var{slot}~\var{vhks}
+%     &\fun{evalTimelock}~(\type{RequireAll}~ls)~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}
 %    \\
-%     &~~~~ = \forall ~s'~ \in~ ls~:~\fun{evalFPS}~s'~\var{pid}~\var{slot}~\var{vhks}
+%     &~~~~ = \forall ~s'~ \in~ ls~:~\fun{evalTimelock}~s'~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}\\~\\
 %     %
-%     &\fun{evalFPS}~(\type{RequireOr}~ls)~\var{pid}~\var{slot}~\var{vhks}
+%     &\fun{evalTimelock}~(\type{RequireOr}~ls)~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}
 %    \\
-%     &~~~~ = \exists ~s'~ \in~ ls~:~\fun{evalFPS}~s'~\var{pid}~\var{slot}~\var{vhks}
+%     &~~~~ = \exists ~s'~ \in~ ls~:~\fun{evalTimelock}~s'~\var{pid}~\var{slot}~\var{vhks}
 %     ~\var{txb}~\var{spentouts}\\
 %   \end{align*}
 %   \caption{Multi-asset Script Evaluation}
@@ -148,7 +142,7 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
 %
 % \begin{figure*}[htb]
 %   \begin{align*}
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~(\type{AssetToAddress}~\var{pid'}~\var{addr})~\var{pid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
 %     &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
 %     &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
@@ -158,13 +152,13 @@ The semantics of the FPS language are specified in Figure~\ref{fig:defs:tx-mc-ev
 %     & ~~~~~~~ \var{c}~=~\fun{if}~ \var{pid'}~\neq~\Nothing~\fun{then}~\var{pid'}~\fun{else}~\var{pid} \\
 %     & \text{checks that tx outputs any pid tokens by themselves to the specified address} \\
 %     & \text {the script address of the given asset when addr unspecified} \\~\\
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~(\type{TrancheTokens}~\var{tts}~\var{txin})~\var{pid}~\var{slot}~\var{vhks}
 %      ~\var{txb}~\var{spentouts}  \\
 %     &~~~~ =~(\var{pid}\mapsto\var{tts}~\in~\var{val})~ \wedge~(\var{txin}~\in~\fun{txins}~{txb}) \\
 %     & \text{tranche tokens is incomplete} \\~\\
 %     %
-%     & \fun{evalFPS}
+%     & \fun{evalTimelock}
 %      ~(\type{FreshTokens})~\var{pid}~\var{slot}~\var{vhks}
 %      ~\var{txb}~\var{spentouts}
 %       \\
