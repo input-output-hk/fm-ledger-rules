@@ -253,6 +253,9 @@ initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
   trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
+-- | A generic Utxow witnessing function designed to be use across many Eras.
+--   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
+--   the PredicateFailure (type family) of the context of where it is called.
 shelleyStyleWitness ::
   forall era utxow.
   ( Era era,
@@ -264,12 +267,13 @@ shelleyStyleWitness ::
     Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
     Signal (utxow era) ~ Core.Tx era,
-    PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
+    -- PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
     ShelleyStyleWitnessNeeds era
   ) =>
+  (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
-shelleyStyleWitness = do
+shelleyStyleWitness embed = do
   (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
   let txbody = getField @"body" tx
       utxo = _utxo u
@@ -286,38 +290,37 @@ shelleyStyleWitness = do
           (Map.toList $ (getField @"scriptWits" tx))
   case failedScripts of
     [] -> pure ()
-    fs -> failBecause $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
+    fs -> failBecause $ embed $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
 
   let sNeeded = scriptsNeeded utxo tx
       sReceived = Map.keysSet (getField @"scriptWits" tx)
   sNeeded == sReceived
-    ?! MissingScriptWitnessesUTXOW
-      (sNeeded `Set.difference` sReceived)
+    ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
 
   -- check VKey witnesses
-  verifiedWits @era tx ?!: InvalidWitnessesUTXOW
+  verifiedWits @era tx ?!: (embed . InvalidWitnessesUTXOW)
 
   let needed = witsVKeyNeeded @era utxo tx genDelegs
       missingWitnesses = diffWitHashes needed witsKeyHashes
       haveNeededWitnesses = case nullWitHashes missingWitnesses of
         True -> Right ()
         False -> Left missingWitnesses
-  haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
+  haveNeededWitnesses ?!: (embed . MissingVKeyWitnessesUTXOW)
 
   -- check metadata hash
   case (getField @"adHash" txbody, auxdata) of
     (SNothing, SNothing) -> pure ()
-    (SJust mdh, SNothing) -> failBecause $ MissingTxMetadata mdh
+    (SJust mdh, SNothing) -> failBecause $ (embed (MissingTxMetadata mdh))
     (SNothing, SJust md') ->
       failBecause $
-        MissingTxBodyMetadataHash (hashAuxiliaryData @era md')
+        embed (MissingTxBodyMetadataHash (hashAuxiliaryData @era md'))
     (SJust mdh, SJust md') -> do
       hashAuxiliaryData @era md' == mdh
-        ?! ConflictingMetadataHash mdh (hashAuxiliaryData @era md')
+        ?! (embed (ConflictingMetadataHash mdh (hashAuxiliaryData @era md')))
 
       -- check metadata value sizes
       when (SoftForks.validMetadata pp) $
-        validateAuxiliaryData @era md' ?! InvalidMetadata
+        validateAuxiliaryData @era md' ?! embed InvalidMetadata
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let genDelegates =
@@ -337,7 +340,7 @@ shelleyStyleWitness = do
   ( (not $ null mirCerts)
       ==> Set.size genSig >= fromIntegral coreNodeQuorum
     )
-    ?! MIRInsufficientGenesisSigsUTXOW genSig
+    ?! (embed (MIRInsufficientGenesisSigsUTXOW genSig))
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -370,5 +373,5 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
-  transitionRules = [shelleyStyleWitness]
+  transitionRules = [shelleyStyleWitness id]
   initialRules = [initialLedgerStateUTXOW]

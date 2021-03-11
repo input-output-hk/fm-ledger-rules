@@ -60,7 +60,7 @@ import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
--- import Plutus.V1.Ledger.Scripts
+-- import Plutus.V1.Ledger.Scripts-- Supply the HasField and Validate instances for Alonzo
 import qualified Language.PlutusTx as Plutus
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Metadata (Metadata)

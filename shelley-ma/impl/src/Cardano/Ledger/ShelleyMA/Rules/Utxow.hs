@@ -62,7 +62,10 @@ instance
   type
     PredicateFailure (UTXOW era) =
       UtxowPredicateFailure era
-  transitionRules = [shelleyStyleWitness]
+  transitionRules = [shelleyStyleWitness id]
+
+  -- The ShelleyMA Era uses the same PredicateFailure type
+  -- as Shelley, so the 'embed' function is identity
   initialRules = []
 
 instance

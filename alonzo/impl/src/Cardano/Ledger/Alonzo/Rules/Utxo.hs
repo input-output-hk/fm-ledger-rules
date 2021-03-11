@@ -321,6 +321,7 @@ utxoTransition = do
 
   -- TODO remove this?
   -- It does not appear in the Alonzo specification. SHOULD IT STAY?
+  -- TooSmallness is always denominated in Coin, so why are we using Val.pointwise?
   let minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter

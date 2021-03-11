@@ -95,7 +95,6 @@ import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     TxWitness (..),
     ppTxWitness,
-    txdats,
     txrdmrs,
     txscripts,
   )
@@ -579,20 +578,21 @@ collectNNScriptInputs pp tx utxo =
         Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
   ]
 
-language :: AlonzoScript.Script era -> Maybe Language
+language :: Typeable (Crypto era) => AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.NativeScript _) = Nothing
-language AlonzoScript.PlutusScript = Just PlutusV1
+language (AlonzoScript.PlutusScript _) = Just PlutusV1
 
 evalScripts ::
+  Typeable (Crypto era) =>
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   Bool
 evalScripts [] = True
 evalScripts ((AlonzoScript.NativeScript _timelock, _, _, _) : rest) =
   evalScripts rest
-evalScripts ((AlonzoScript.PlutusScript, ds, units, cost) : rest) =
+evalScripts ((AlonzoScript.PlutusScript s, ds, units, cost) : rest) =
   b && evalScripts rest
   where
-    (IsValidating b, _exunits) = runPLCScript cost AlonzoScript.PlutusScript ds units
+    (IsValidating b, _exunits) = runPLCScript cost (AlonzoScript.PlutusScript s) ds units
 
 -- ===================================================================
 -- From Specification, Figure 12 "UTXOW helper functions"

@@ -134,7 +134,11 @@ instance Mock c => Arbitrary (Tx (AlonzoEra c)) where
       <*> arbitrary
 
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
-  arbitrary = frequency [(1, pure PlutusScript), (9, NativeScript <$> arbitrary)]
+  arbitrary =
+    frequency
+      [ -- (1, pure PlutusScript) -- Until we have one of these we never generate one.
+        (9, NativeScript <$> arbitrary)
+      ]
 
 -- ==========================
 --
