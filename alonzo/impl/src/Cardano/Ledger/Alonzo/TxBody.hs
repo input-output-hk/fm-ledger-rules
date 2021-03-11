@@ -328,7 +328,6 @@ instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentT
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
 inputs_fee' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)

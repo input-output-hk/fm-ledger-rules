@@ -10,7 +10,9 @@ module Cardano.Ledger.Alonzo where
 
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), PParamsUpdate, updatePParams)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (Tx)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
@@ -120,9 +122,9 @@ instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 
 type instance Core.EraRule "UTXOS" (AlonzoEra c) = Alonzo.UTXOS (AlonzoEra c)
 
-type instance Core.EraRule "UTXO" (AlonzoEra c) = STUB () () () () Shelley.ShelleyBase
+type instance Core.EraRule "UTXO" (AlonzoEra c) = Alonzo.AlonzoUTXO (AlonzoEra c)
 
-type instance Core.EraRule "UTXOW" (AlonzoEra c) = STUB () () () () Shelley.ShelleyBase
+type instance Core.EraRule "UTXOW" (AlonzoEra c) = Alonzo.AlonzoUTXOW (AlonzoEra c)
 
 type LEDGERSTUB c =
   STUB

@@ -17,7 +17,6 @@ import Cardano.Ledger.Alonzo.Tx
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.Shelley.Constraints
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
@@ -78,7 +77,6 @@ instance
 utxosTransition ::
   forall era.
   ( UsesTxOut era,
-    UsesScript era,
     Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -92,7 +90,6 @@ utxosTransition ::
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
