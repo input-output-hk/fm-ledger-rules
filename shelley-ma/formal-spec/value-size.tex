@@ -7,34 +7,34 @@ UTxO, permanently blocking memory. Because members of the $\Value$
 type can be arbitrary large, the ledger requires a $\UTxO$ entry to
 contain a minimum amount of Ada, proportional to its size.
 
-How much memory is used exactly is an implementation detail, but some facts are:
-\begin{itemize}
-  \item Every output contains and address and Ada, which take a constant amount of space.
-  \item The size will scale linearly with the number of $\PolicyID$s and tokens in the $\Value$.
-  \item The number of $\PolicyID$s is less than or equal to the number of tokens.
-\end{itemize}
-
-Because of the first two items in that list, we could use the following definition for $\fun{outputSize}$:
-
 \begin{figure*}[h]
+  \emph{Constants}
   \begin{align*}
-    & \fun{outputSize} \in \PParams \to \TxOut \to \MemoryEstimate \\
-    & \fun{outputSize}~{pp}~\var{out} = k_0 + k_1 * |\{ (\var{pid}, \var{aid}) : \var{v}~\var{pid}~\var{aid} \neq 0
-            \land (\var{pid}, \var{aid}) \neq (\mathsf{adaPolicy}, \mathsf{adaName}) \}| \\
-    & \phantom{\fun{outputSize}~{pp}~\var{out} = k_0} + k_2 * |\{ \var{pid} : \exists aid : v~pid~aid \neq 0 \}| \\
-    & ~~\where \\
-    & ~~~~~~(k_0, k_1, k_2) = \fun{outputSizeConstants}~{pp}
+  \var{utxoEntrySizeWithoutVal} \in \MemoryEstimate \\
+  \var{adaOnlyUTxOSize} \in \MemoryEstimate
+  \end{align*}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+    & \fun{adaPerUTxOByte}~\in \PParams \to \Coin \\
+    & \fun{adaPerUTxOByte}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp, \var{adaOnlyUTxOSize}) \\
+    & \text{Calculate the cost of storing a byte of data as a UTxO entry}
+    %
+    & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
+    & \fun{utxoEntrySize}~\var{out} = \var{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~out))
   \end{align*}
   \caption{Value Size}
   \label{fig:test}
 \end{figure*}
 
-Here, $k_0$ reflects the constant part, i.e. Ada, the key and the address, $k_1$ reflects the
-size of non-ada tokens, and $k_2$ the size of $\PolicyID$s.
+How much memory is used exactly is an implementation detail, with the current constants, in Haskell words (8 bytes):
+\begin{itemize}
+  \item $\var{utxoEntrySizeWithoutVal} = 27$
+  \item $\var{adaOnlyUTxOSize} = 27$
+\end{itemize}
 
-There are some trade-offs here. Because of the third item in the above
-list, $k_2$ could be set to zero without changing the asymptotic
-behaviour, somewhat simplifying this function. This is important,
-because this function influences how much users have to send each
+We do not give the specifics of the $\fun{size}$ function here, because
+we left the implementation of $\Value$ itself non-specific. This calculation
+influences how much users have to send each
 other for transactions to be valid, so having a function that a user
 can easily evaluate by themselves is important.

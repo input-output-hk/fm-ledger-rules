@@ -13,7 +13,7 @@
   %
   \emph{Abstract Helper Function}
   \begin{align*}
-    \fun{outputSize} \in& ~\TxOut \to \MemoryEstimate & \text{Memory estimate for}~\TxOut
+    \fun{utxoEntrySize} \in& ~\TxOut \to \MemoryEstimate & \text{Memory estimate for}~\TxOut
   \end{align*}
   %
   \emph{Helper Functions}
@@ -55,7 +55,7 @@ UTxO transition system with multi-assets:
 
 \begin{itemize}
 
-  \item The $\fun{outputSize}$ function provides a rough estimate of
+  \item The $\fun{utxoEntrySize}$ function provides a rough estimate of
     the amount of memory the storage of an output will consume, which is used in the UTXO rule.
     Its implementation is described in Appendix \ref{sec:value-size}.
 
@@ -118,10 +118,14 @@ of this rule as compared to the original Shelley UTXO rule:
 
   \item The transaction is not minting any Ada.
 
-  \item The $\Value$ of each output is constrained from below by a
-    $\Value$ that contains the product of $\var{adaPerUTxOByte}$ and the
-    estimated size of the output as Ada, and zero otherwise. Note that
-    this implies that no quantity appearing in that output can be
+  \item The $\Value$ in each output is constrained from below by a
+    $\Value$ that contains some amount of ada and no other tokens.
+    The amount of ada that is contained in the constraint $\Value$ (and
+    hence the $\Value$ in the output itself must contain at least as much) depends on the
+    size of the output. To get the minimum ada amount, the size of the output is multiplied by
+    the function $\var{adaPerUTxOByte}$ applied to protocol parameters
+    (see Section~\ref{sec:value-size} for the function definition).
+    Note that this check implies that no quantity of any token appearing in that output can be
     negative.
 \end{itemize}
 
@@ -158,7 +162,7 @@ $\Coin$.
       \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{mint}~txb}} \\
       ~\\
       \hldiff{\forall txout \in \txouts{txb},} \\
-      \hldiff{\fun{getValue}~txout \geq \fun{coinToValue}(\fun{outputSize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
+      \hldiff{\fun{getValue}~txout \geq \fun{coinToValue}(\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOByte}~pp)} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64
       \\

@@ -5,7 +5,7 @@ will not be the case anymore. The protocol parameter
 $\var{minUTxOValue}$ was used to prevent an attack on the UTxO size,
 but as there is no upper bound on the memory usage of a UTxO entry
 anymore, this parameter will be retired in favor of two new
-parameters, $\var{adaPerUTxOByte}$ and $\var{outputSizeConstants}$.
+parameters, $\var{adaPerUTxOByte}$ and $\var{utxoEntrySizeConstants}$.
 
 
 \begin{figure*}[htb]
@@ -14,7 +14,7 @@ parameters, $\var{adaPerUTxOByte}$ and $\var{outputSizeConstants}$.
   \begin{equation*}
       \begin{array}{r@{~\in~}lr}
         \var{adaPerUTxOByte} \mapsto \nonnegReals & \PParams & \text{conversion factor for UTxO storage space}\\
-        \var{outputSizeConstants} \mapsto \Z \times \Z \times \Z & \PParams & \text{constants for outputSize}
+        \var{utxoEntrySizeConstants} \mapsto \Z \times \Z \times \Z & \PParams & \text{constants for utxoEntrySize}
       \end{array}
   \end{equation*}
   %
@@ -22,7 +22,7 @@ parameters, $\var{adaPerUTxOByte}$ and $\var{outputSizeConstants}$.
   %
   \begin{center}
     \fun{adaPerUTxOByte},
-    \fun{outputSizeConstants}
+    \fun{utxoEntrySizeConstants}
   \end{center}
   %
   \caption{Definitions Used in Protocol Parameters}

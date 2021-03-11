@@ -35,7 +35,8 @@ fees, rewards, treasury, and the proof of stake protocol.
   %
   \begin{align*}
     \mathsf{adaPolicy} \in& ~\PolicyID & \text{Ada Policy ID} \\
-    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name}
+    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name} \\
+    \mathsf{size} \in& ~\Value\to\MemoryEstimate & \text{the size of a Value}
   \end{align*}
   \emph{Helper Functions}
   %
@@ -55,9 +56,9 @@ fees, rewards, treasury, and the proof of stake protocol.
 \end{figure*}
 
 \subsection*{Representing Multi-asset Types and Values}
-An \emph{Asset} comprises a set of different \emph{Asset Classes}, each of which has
-a unique identifier, $\AssetName$. We will refer to a pair of a $\PolicyID$ and an
+We will refer to a pair of a $\PolicyID$ and an
 $\AssetName$ as an $\AssetID$. The $\AssetID$ for Ada is $(\mathsf{adaPolicy}, \mathsf{adaName})$.
+This is symbolic only, no actual minting policy for Ada exists.
 
 The set of tokens that are referred to by the underlying monetary
 policy represents the coinage that the asset supports. A multi-asset
@@ -88,6 +89,9 @@ $\PolicyID$ and $\AssetName$ to $\Quantity$.
   \item $\mathsf{adaPolicy}$ and $\mathsf{adaName}$ are the $\PolicyID$ and $\AssetName$ of Ada respectively.
     It is not possible to mint any token with the $\PolicyID$ $\mathsf{adaPolicy}$, which means that every
     token in the UTxO belonging to $\mathsf{adaPolicy}$ will have $\AssetName$ $\mathsf{adaName}$.
+
+  \item $\mathsf{size}$ returns the size (in units of memory, eg. bytes or words) of a $\Value$. This function
+  depends on the representation of $\Value$ specific to the implementation
 
   \item $\fun{coinToValue}$ and $\fun{valueToCoin}$ convert between the two types,
   by taking a $\Coin$ to a $\Value$ that only contains Ada, and extracting the amount of Ada from a $\Value$ respectively.
