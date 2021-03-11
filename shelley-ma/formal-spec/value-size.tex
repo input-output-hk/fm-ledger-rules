@@ -18,10 +18,11 @@ contain a minimum amount of Ada, proportional to its size.
   \begin{align*}
     & \fun{adaPerUTxOByte}~\in \PParams \to \Coin \\
     & \fun{adaPerUTxOByte}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp, \var{adaOnlyUTxOSize}) \\
-    & \text{Calculate the cost of storing a byte of data as a UTxO entry}
+    & \text{Calculate the cost of storing a memory unit of data as a UTxO entry} \\~\\
     %
     & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
-    & \fun{utxoEntrySize}~\var{out} = \var{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~out))
+    & \fun{utxoEntrySize}~\var{out} = \var{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~out)) \\
+    & \text{Calculate the size of a UTxO entry}
   \end{align*}
   \caption{Value Size}
   \label{fig:test}
