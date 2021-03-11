@@ -10,18 +10,19 @@ contain a minimum amount of Ada, proportional to its size.
 \begin{figure*}[h]
   \emph{Constants}
   \begin{align*}
-  \var{utxoEntrySizeWithoutVal} \in \MemoryEstimate \\
-  \var{adaOnlyUTxOSize} \in \MemoryEstimate
+  \mathsf{UtxoEntrySizeWithoutVal} \in \MemoryEstimate \\
+  \mathsf{AdaOnlyUTxOSize} \in \MemoryEstimate
+  \mathsf{MaxValSize} \in \MemoryEstimate
   \end{align*}
   %
   \emph{Helper Functions}
   \begin{align*}
     & \fun{adaPerUTxOByte}~\in \PParams \to \Coin \\
-    & \fun{adaPerUTxOByte}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp, \var{adaOnlyUTxOSize}) \\
+    & \fun{adaPerUTxOByte}~pp = \fun{quot}~ (\fun{minUTxOValue}~pp, \mathsf{adaOnlyUTxOSize}) \\
     & \text{Calculate the cost of storing a memory unit of data as a UTxO entry} \\~\\
     %
     & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
-    & \fun{utxoEntrySize}~\var{out} = \var{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~out)) \\
+    & \fun{utxoEntrySize}~\var{out} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~out)) \\
     & \text{Calculate the size of a UTxO entry}
   \end{align*}
   \caption{Value Size}
@@ -30,8 +31,9 @@ contain a minimum amount of Ada, proportional to its size.
 
 How much memory is used exactly is an implementation detail, with the current constants, in Haskell words (8 bytes):
 \begin{itemize}
-  \item $\var{utxoEntrySizeWithoutVal} = 27$
-  \item $\var{adaOnlyUTxOSize} = 27$
+  \item $\mathsf{utxoEntrySizeWithoutVal} = 27$
+  \item $\mathsf{adaOnlyUTxOSize} = 27$
+  \item $\mathsf{MaxValSize} = 500$ words, ie. 4000 bytes.
 \end{itemize}
 
 We do not give the specifics of the $\fun{size}$ function here, because
