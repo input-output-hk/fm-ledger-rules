@@ -581,6 +581,7 @@ type BlockAnn era =
 blockDecoder ::
   ( ToCBOR (Core.TxBody era),
     ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.Script era),
     BlockAnn era,
     ValidateScript era
   ) =>
@@ -595,6 +596,7 @@ blockDecoder lax = annotatorSlice $
 txSeqDecoder ::
   ( ToCBOR (Core.TxBody era),
     ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.Script era),
     BlockAnn era,
     ValidateScript era
   ) =>
@@ -636,6 +638,7 @@ txSeqDecoder lax = do
 instance
   ( BlockAnn era,
     ToCBOR (Core.TxBody era),
+    ToCBOR (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
     ValidateScript era
   ) =>
@@ -656,6 +659,7 @@ instance
   ( Era era,
     BlockAnn era,
     ToCBOR (Core.TxBody era),
+    ToCBOR (Core.Script era),
     ToCBOR (Core.AuxiliaryData era),
     ValidateScript era
   ) =>

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -58,8 +59,10 @@ instance
   (CC.Crypto c) =>
   Shelley.ValidateScript (AlonzoEra c)
   where
+  scriptPrefixTag _proxy = "\x00"
   validateScript = error "TODO: implement validateScript"
-  hashScript = error "TODO: implement hashScript"
+
+-- use the default method for hashScript
 
 instance
   ( CC.Crypto c

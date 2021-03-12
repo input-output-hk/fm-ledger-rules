@@ -24,7 +24,6 @@ module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf, RequireTimeExpire, RequireTimeStart),
     pattern TimelockConstr,
     inInterval,
-    hashTimelockScript,
     showTimelock,
     validateTimelock,
     ValidityInterval (..),
@@ -41,9 +40,7 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     FullByteString (Full),
     ToCBOR (toCBOR),
-    serialize',
   )
-import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
@@ -57,6 +54,7 @@ import Cardano.Ledger.Pretty
     ppSlotNo,
     ppStrictMaybe,
   )
+import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesTxBody)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -88,7 +86,7 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.Scripts (MultiSig, ScriptHash (..), getMultiSigBytes, nativeMultiSigTag)
+import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
 import Shelley.Spec.Ledger.Serialization
   ( decodeStrictSeq,
     encodeFoldable,
@@ -186,7 +184,7 @@ instance CC.Crypto crypto => FromCBOR (Annotator (TimelockRaw crypto)) where
 
 newtype Timelock crypto = TimelockConstr (MemoBytes (TimelockRaw crypto))
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (ToCBOR, NoThunks, NFData)
+  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
 deriving via
   Mem (TimelockRaw crypto)
@@ -311,18 +309,6 @@ validateTimelock lock tx = evalFPS @era lock vhks (_body tx)
     -- THIS IS JUST A STUB. WHO KNOWS IF
     witsSet = _witnessSet tx -- IT COMPUTES THE RIGHT WITNESS SET.
     vhks = Set.map witKeyHash (addrWits' witsSet)
-
--- | Hashes native timelock script.
-hashTimelockScript ::
-  CC.Crypto crypto =>
-  Timelock crypto ->
-  ScriptHash crypto
-hashTimelockScript =
-  ScriptHash
-    . Hash.castHash
-    -- since timelock scripts are a strict backwards compatible extension
-    -- of multisig scripts we can use the same tag here
-    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 showTimelock :: CC.Crypto crypto => Timelock crypto -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"

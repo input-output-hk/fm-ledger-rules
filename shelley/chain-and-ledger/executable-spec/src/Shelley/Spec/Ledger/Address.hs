@@ -14,8 +14,8 @@
 module Shelley.Spec.Ledger.Address
   ( mkVKeyRwdAcnt,
     mkRwdAcnt,
-    scriptsToAddr,
-    scriptToCred,
+    -- scriptsToAddr,
+    -- scriptToCred,
     toAddr,
     toCred,
     serialiseAddr,
@@ -136,6 +136,7 @@ toCred ::
   Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
 
+{-  THese don't seem to be called anywhere
 -- | Convert a given multi-sig script to a credential by hashing it and wrapping
 -- into the 'Credential' data type.
 scriptToCred :: CC.Crypto crypto => MultiSig crypto -> Credential kr crypto
@@ -145,6 +146,8 @@ scriptToCred = ScriptHashObj . hashMultiSigScript
 scriptsToAddr :: CC.Crypto crypto => Network -> (MultiSig crypto, MultiSig crypto) -> Addr crypto
 scriptsToAddr n (payScript, stakeScript) =
   Addr n (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
+
+-}
 
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr crypto -> ByteString

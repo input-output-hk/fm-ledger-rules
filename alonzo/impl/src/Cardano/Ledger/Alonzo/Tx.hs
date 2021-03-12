@@ -96,7 +96,6 @@ import Cardano.Ledger.Alonzo.TxWitness
     TxWitness (..),
     ppTxWitness,
     txrdmrs,
-    txscripts,
   )
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
@@ -301,6 +300,9 @@ instance
 
 instance c ~ (Crypto era) => HasField "bootWits" (Tx era) (Set (BootstrapWitness c)) where
   getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txwitsBoot' x
+
+instance c ~ (Crypto era) => HasField "txdatahash" (Tx era) (Map.Map (DataHash c) (Data era)) where
+  getField (TxConstr (Memo (TxRaw _ x _ _) _)) = txdats' x
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -533,7 +535,7 @@ runPLCScript _cost _script _data _exunits = (IsValidating True, ExUnits 0 0) -- 
 
 getData ::
   forall era.
-  ( HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
   Tx era ->
   UTxO era ->
@@ -549,8 +551,8 @@ getData tx (UTxO m) sp = case sp of
       Nothing -> []
       Just txout ->
         case getField @"datahash" txout of
-          Nothing -> []
-          Just hash ->
+          SNothing -> []
+          SJust hash ->
             case Map.lookup hash (txdats' (getField @"wits" tx)) of
               Nothing -> []
               Just d -> [d]
@@ -558,7 +560,7 @@ getData tx (UTxO m) sp = case sp of
 collectNNScriptInputs ::
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -572,7 +574,7 @@ collectNNScriptInputs pp tx utxo =
   [ (script, d : (valContext utxo tx sp ++ getData tx utxo sp), eu, cost)
     | (sp, scripthash) <- scriptsNeeded utxo tx, -- TODO, IN specification ORDER IS WRONG
       (d, eu) <- maybeToList (indexedRdmrs tx sp),
-      script <- maybeToList (Map.lookup scripthash (txscripts (getField @"wits" tx))),
+      script <- maybeToList (Map.lookup scripthash (txscripts' (getField @"wits" tx))),
       cost <- case language script of
         Nothing -> []
         Just lang -> maybeToList (Map.lookup lang (getField @"_costmdls" pp))
@@ -650,7 +652,7 @@ addOnlyCwitness !ans _ = ans
 checkScriptData ::
   forall era.
   ( ValidateScript era,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
@@ -661,7 +663,7 @@ checkScriptData ::
   Bool
 checkScriptData tx utxo (sp, _h) = any ok scripts
   where
-    scripts = txscripts (getField @"wits" tx)
+    scripts = txscripts' (getField @"wits" tx)
     isSpending (Spending _) = True
     isSpending _ = False
     ok s =

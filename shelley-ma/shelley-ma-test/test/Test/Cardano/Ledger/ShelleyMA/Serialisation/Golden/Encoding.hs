@@ -21,7 +21,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval (..),
-    hashTimelockScript,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import qualified Cardano.Ledger.Val as Val
@@ -44,6 +43,7 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Tx(ValidateScript(hashScript))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -76,10 +76,10 @@ policy1 :: CC.Crypto crypto => Timelock crypto
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
 policyID1 :: PolicyID TestCrypto
-policyID1 = PolicyID . hashTimelockScript $ policy1
+policyID1 = PolicyID . (hashScript @A) $ policy1
 
 policyID2 :: PolicyID TestCrypto
-policyID2 = PolicyID . hashTimelockScript . RequireAllOf . StrictSeq.fromList $ []
+policyID2 = PolicyID . (hashScript @A) . RequireAllOf . StrictSeq.fromList $ []
 
 assetName1 :: BS.ByteString
 assetName1 = BS.pack "a1"

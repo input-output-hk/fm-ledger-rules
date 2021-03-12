@@ -158,7 +158,7 @@ type ShelleyStyleWitnessNeeds era =
 -- | Constraints to make an Alonzo Utxow STS instance
 --   (in addition to ShelleyStyleWitnessNeeds)
 type AlonzoStyleAdditions era =
-  ( HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
+  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
     HasField "txdatahash" (Core.Tx era) (Map.Map (DataHash (Crypto era)) (Data era)),
     HasField "sdHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
   )
@@ -215,7 +215,7 @@ alonzoStyleWitness = do
       utxoHashes =
         [ h
           | (_input, output) <- Map.toList smallUtxo,
-            Just h <- [getField @"datahash" output],
+            SJust h <- [getField @"datahash" output],
             isNonNativeScriptAddress @era tx (getField @"address" output)
         ]
       txHashes = domain (getField @"txdatahash" tx)

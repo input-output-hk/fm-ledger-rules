@@ -34,7 +34,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval,
-    hashTimelockScript,
     validateTimelock,
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
@@ -53,6 +52,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxOut (..),
     ValidateScript (..),
+    nativeMultiSigTag,
   )
 
 -- | The Shelley Mary/Allegra eras
@@ -151,6 +151,10 @@ type instance
 -- Ledger data instances
 --------------------------------------------------------------------------------
 
+-- since timelock scripts are a strict backwards compatible extension of
+--  Multisig scripts, we can use the same 'scriptPrefixTag' tag here as
+-- we did for the ValidateScript instance in Multisig
+
 instance
   ( CryptoClass.Crypto c,
     UsesTxBody (ShelleyMAEra ma c),
@@ -159,8 +163,10 @@ instance
   ) =>
   ValidateScript (ShelleyMAEra ma c)
   where
+  scriptPrefixTag _proxy = nativeMultiSigTag -- "\x00"
   validateScript s tx = validateTimelock s tx
-  hashScript s = hashTimelockScript s
+
+-- Uses the default instance of hashScript
 
 instance
   ( CryptoClass.Crypto c,

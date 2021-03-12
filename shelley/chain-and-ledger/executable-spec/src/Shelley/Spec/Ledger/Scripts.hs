@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -10,8 +11,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Scripts
   ( MultiSig
@@ -22,8 +26,6 @@ module Shelley.Spec.Ledger.Scripts
       ),
     getMultiSigBytes,
     ScriptHash (..),
-    hashMultiSigScript,
-    nativeMultiSigTag,
   )
 where
 
@@ -31,15 +33,13 @@ import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR,
-    serialize',
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.SafeHash (EraIndependentScript)
+import Cardano.Ledger.SafeHash (EraIndependentScript, SafeToHash (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson
-import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import Data.MemoBytes
@@ -52,12 +52,6 @@ import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
-
--- | Magic number representing the tag of the native multi-signature script
--- language. For each script language included, a new tag is chosen and the tag
--- is included in the script hash for a script.
-nativeMultiSigTag :: BS.ByteString
-nativeMultiSigTag = "\00"
 
 -- | A simple language for expressing conditions under which it is valid to
 -- withdraw from a normal UTxO payment address or to use a stake address.
@@ -88,7 +82,7 @@ data MultiSigRaw crypto
 
 newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (ToCBOR, NoThunks)
+  deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 getMultiSigBytes :: MultiSig crypto -> ShortByteString
 getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes
@@ -145,16 +139,6 @@ deriving newtype instance
 deriving newtype instance ToJSON (ScriptHash crypto)
 
 deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)
-
--- | Hashes native multi-signature script.
-hashMultiSigScript ::
-  CC.Crypto crypto =>
-  MultiSig crypto ->
-  ScriptHash crypto
-hashMultiSigScript =
-  ScriptHash
-    . Hash.castHash
-    . Hash.hashWith (\x -> nativeMultiSigTag <> serialize' x)
 
 instance
   CC.Crypto crypto =>

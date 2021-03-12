@@ -159,6 +159,8 @@ pattern TxOut addr vl dh <-
 
 {-# COMPLETE TxOut #-}
 
+-- ======================================
+
 type WitnessPPDataHash crypto = SafeHash crypto EraIndependentWitnessPPData
 
 data TxBodyRaw era = TxBodyRaw
@@ -541,15 +543,6 @@ instance HasField "txfee" (TxBody era) Coin where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = _update m
 
-instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
-  getField (TxOutCompact a _ _) = a
-
-instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
-  getField (TxOutCompact a _ _) = decompactAddr a
-
-instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v _) = fromCompact v
-
 instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
   getField (TxBodyConstr (Memo m _)) = _mint m
 
@@ -567,6 +560,24 @@ instance
   HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _adHash m
+
+instance
+  c ~ (Crypto era) =>
+  HasField "sdHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _sdHash m
+
+instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
+  getField (TxOutCompact a _ _) = a
+
+instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
+  getField (TxOutCompact a _ _) = decompactAddr a
+
+instance c ~ (Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+  getField (TxOutCompact _ _ datahash) = datahash
+
+instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
+  getField (TxOutCompact _ v _) = fromCompact v
 
 -- ===================================================
 

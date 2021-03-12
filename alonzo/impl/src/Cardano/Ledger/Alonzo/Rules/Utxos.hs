@@ -62,7 +62,7 @@ instance
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era)))
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
   STS (UTXOS era)
   where
@@ -88,7 +88,7 @@ utxosTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "datahash" (Core.TxOut era) (Maybe (DataHash (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))

@@ -35,8 +35,8 @@ import Shelley.Spec.Ledger.Tx
   ( Tx,
     TxBody,
     TxOut (..),
-    ValidateScript (hashScript, validateScript),
-    hashMultiSigScript,
+    ValidateScript (..),
+    nativeMultiSigTag,
     validateNativeMultiSigScript,
   )
 
@@ -80,8 +80,10 @@ instance
   (CryptoClass.Crypto c, UsesTxBody (ShelleyEra c)) =>
   ValidateScript (ShelleyEra c)
   where
+  scriptPrefixTag _proxy = nativeMultiSigTag -- "\x00"
   validateScript = validateNativeMultiSigScript
-  hashScript = hashMultiSigScript
+
+-- using the default instance of hashScript
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m
